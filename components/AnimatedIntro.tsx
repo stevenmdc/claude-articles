@@ -16,7 +16,17 @@ const itemVariants: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.45 } },
 };
 
-export default function AnimatedIntro() {
+interface AnimatedIntroProps {
+  subtitle: string;
+  title: string;
+  description: string;
+}
+
+export default function AnimatedIntro({
+  subtitle,
+  title,
+  description,
+}: AnimatedIntroProps) {
   return (
     <motion.div
       initial="hidden"
@@ -25,19 +35,16 @@ export default function AnimatedIntro() {
       className="space-y-6"
     >
       <motion.p variants={itemVariants} className="text-sm uppercase tracking-[0.3em] text-neutral-500">
-        Claude Articles
+        {subtitle}
       </motion.p>
       <motion.h1
         variants={itemVariants}
         className="text-4xl leading-tight text-neutral-900"
       >
-        A field guide to building precise, elegant AI-assisted articles.
+        {title}
       </motion.h1>
       <motion.p variants={itemVariants} className="text-base leading-7 text-neutral-700">
-        This guide documents the working style behind Claude Articles: how the
-        teams collect context, shape prompts, and review drafts so every chapter
-        reads with clarity. Follow the flow, then adapt it to your newsroom or
-        studio.
+        {description}
       </motion.p>
       <motion.div
         variants={itemVariants}

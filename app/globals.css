@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 :root {
   --background: #fdfcf7;
@@ -33,10 +34,21 @@ body {
     font-family: "Tiempos Text", var(--font-heading), "Times New Roman", serif;
     font-weight: 800;
     font-synthesis: weight;
+    font-size: 20px;
+    margin: 0 0 15px;
+    line-height: 26px;
   }
 
   a {
     @apply text-sky-500 transition-colors hover:text-sky-600;
+  }
+
+  .prose blockquote {
+    @apply rounded-md border border-black/10 bg-gray-100 px-4 py-3 text-sm text-neutral-700 not-italic;
+  }
+
+  .prose blockquote p {
+    @apply leading-6 text-neutral-700;
   }
 }
 

@@ -1,20 +1,22 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Navbar() {
   return (
     <nav className="fixed top-0 z-50 w-full border-b border-black/10 bg-[#f0f0eb]">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <div className="flex items-center gap-3 text-neutral-900">
+        <Link className="flex items-center gap-3 text-neutral-900" href="/">
           <Image
             src="/images/logo.png"
             alt="Claude Articles logo"
             width={150}
             height={50}
+            loading="eager"
           />
-          <span className="-tranneutral-y-2 -tranneutral-x-2 font-heading font-semibold">
+          <span className="-translate-y-2 -translate-x-2 font-heading font-semibold">
             Articles
           </span>
-        </div>
+        </Link>
       </div>
     </nav>
   );

@@ -1,40 +1,54 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { chapters } from "@/data/chapters";
 
-export default function TableOfContents() {
+interface Chapter {
+  id: string;
+  number: string;
+  title: string;
+}
+
+interface TableOfContentsProps {
+  chapters?: Chapter[];
+}
+
+export default function TableOfContents({
+  chapters = [],
+}: TableOfContentsProps) {
   const [activeId, setActiveId] = useState<string>(chapters[0]?.id ?? "");
 
   useEffect(() => {
-    const observed = chapters
-      .map((chapter) => document.getElementById(chapter.id))
-      .filter((section): section is HTMLElement => Boolean(section));
-
-    if (observed.length === 0) {
-      return undefined;
-    }
+    if (chapters.length === 0) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries
           .filter((entry) => entry.isIntersecting)
           .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-
-        if (visible[0]) {
+        
+        if (visible.length > 0) {
           setActiveId(visible[0].target.id);
         }
       },
-      {
-        rootMargin: "-30% 0px -60% 0px",
-        threshold: 0.1,
-      },
+      { 
+        rootMargin: "-20% 0px -60% 0px",
+        threshold: 0.1
+      }
     );
 
-    observed.forEach((section) => observer.observe(section));
+    // Observer toutes les sections
+    const sections = chapters
+      .map((chapter) => document.getElementById(chapter.id))
+      .filter((section): section is HTMLElement => section !== null);
+
+    sections.forEach((section) => observer.observe(section));
 
     return () => observer.disconnect();
-  }, []);
+  }, [chapters]);
+
+  if (chapters.length === 0) {
+    return null;
+  }
 
   return (
     <aside className="fixed left-0 top-16 hidden h-[calc(100vh-4rem)] w-64 border-r border-black/10 bg-white/70 px-4 py-6 backdrop-blur lg:block">
@@ -50,6 +64,7 @@ export default function TableOfContents() {
               <a
                 key={chapter.id}
                 href={`#${chapter.id}`}
+                onClick={() => setActiveId(chapter.id)}
                 aria-current={isActive ? "page" : undefined}
                 className={`flex items-center gap-3 px-3 py-2 text-sm transition-colors ${
                   isActive
