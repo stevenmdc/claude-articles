@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Claude Articles
+
+A Next.js application replicating the Claude Articles layout with a clean, professional design.
+
+## Features
+
+- 🎨 Cream navbar (#f0f0eb) with Claude branding
+- 📑 Fixed sidebar table of contents with 8 chapters
+- ✨ Active chapter highlighting in yellow
+- 🔗 Sky-500 hyperlinks with hover effects
+- 📱 Responsive layout
+- 🎯 Clean typography using Tiempos Text for headings and system fonts for body
+
+## Tech Stack
+
+- **Next.js 14** - React framework with App Router
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Utility-first styling
+- **Lucide React** - Icon library
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ and npm
+
+### Installation
+
+1. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Run the development server:
+```bash
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project Structure
 
-## Learn More
+```
+claude-articles/
+├── app/
+│   ├── layout.tsx       # Root layout with navbar & sidebar
+│   ├── page.tsx         # Main article content
+│   └── globals.css      # Global styles
+├── components/
+│   ├── Navbar.tsx       # Top navigation
+│   └── TableOfContents.tsx # Sidebar menu
+└── PLAN.md              # Detailed project documentation
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Key Features Explained
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Navigation
+- **Navbar**: Fixed at top with logo, language selector, and pricing link
+- **Sidebar**: Fixed table of contents with smooth scrolling to sections
+- **Active State**: Current chapter highlighted in yellow background
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Styling
+- **Fonts**: 
+  - Tiempos Text (serif) for H1 and H2
+  - System UI for body text
+- **Colors**:
+  - Cream background (#f0f0eb) for navbar
+  - Sky-500 for links and hover states
+  - Yellow-100 for active chapter highlighting
 
-## Deploy on Vercel
+### Layout
+- Sidebar: 256px wide, fixed position
+- Main content: Centered with max-width, left margin for sidebar
+- No footer (as specified)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Customization
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Edit the content in `app/page.tsx` to modify the article text.
+
+Update chapters in `components/TableOfContents.tsx` to change the sidebar menu.
+
+Modify colors and styles in `tailwind.config.js` and `app/globals.css`.
+
+## Build for Production
+
+```bash
+npm run build
+npm start
+```
+
+## License
+
+This is a demo project created for educational purposes.
