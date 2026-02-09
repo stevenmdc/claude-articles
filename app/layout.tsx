@@ -1,23 +1,24 @@
-import type { Metadata } from "next";
-import { Cormorant_Garamond, Source_Sans_3 } from "next/font/google";
-import Navbar from "@/components/Navbar";
-import TableOfContents from "@/components/TableOfContents";
-import "./globals.css";
+ import type { Metadata } from "next";
+ import { Crimson_Pro, Source_Sans_3 } from "next/font/google";
+ import Navbar from "@/components/Navbar";
+ import TableOfContents from "@/components/TableOfContents";
+ import "./globals.css";
 
 const bodyFont = Source_Sans_3({
   variable: "--font-body",
   subsets: ["latin"],
 });
 
-const headingFont = Cormorant_Garamond({
-  variable: "--font-heading",
+const serifFont = Crimson_Pro({
   subsets: ["latin"],
-  weight: ["400", "600", "700"],
+  weight: ["400", "600"],
+  variable: "--font-serif",
 });
 
 export const metadata: Metadata = {
   title: "Claude Articles",
-  description: "A field guide to building precise, elegant AI-assisted articles.",
+  description:
+    "A field guide to building precise, elegant AI-assisted articles.",
 };
 
 export default function RootLayout({
@@ -27,12 +28,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${bodyFont.variable} ${headingFont.variable} antialiased`}>
+      <body className={`${bodyFont.variable} ${serifFont.variable} antialiased`}>
         <Navbar />
         <TableOfContents />
-        <main className="pt-20 lg:ml-64">
-          <div className="mx-auto max-w-3xl px-6 pb-24">{children}</div>
-        </main>
+        {children}
       </body>
     </html>
   );

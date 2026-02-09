@@ -17,6 +17,26 @@ export default function Navbar() {
             Articles
           </span>
         </Link>
+        <div className="flex items-center gap-6">
+          <a
+            href="/pricing"
+            className="text-sm font-medium text-neutral-700 hover:text-neutral-900"
+          >
+            Pricing
+          </a>
+          <a
+            href="https://support.claude.com/en"
+            className="text-sm font-medium text-neutral-700 hover:text-neutral-900"
+          >
+            Docs
+          </a>
+          <a
+            href="/contact"
+            className="text-sm font-medium text-neutral-700 hover:text-neutral-900"
+          >
+            Contact
+          </a>
+        </div>
       </div>
     </nav>
   );

@@ -27,15 +27,26 @@ export default async function ArticlePage({
     notFound();
   }
 
+  const generatedChapters = article.metadata.chapters ?? [];
+  const chapters = [
+    { id: "intro", number: "0", title: "Intro" },
+    ...generatedChapters.map((chapter, index) => ({
+      ...chapter,
+      number: String(index + 1),
+    })),
+  ];
+
   return (
     <>
-      <TableOfContents chapters={article.metadata.chapters} />
+      <TableOfContents chapters={chapters} />
       <article className="space-y-16 py-12">
-        <AnimatedIntro
-          subtitle={article.metadata.subtitle}
-          title={article.metadata.title}
-          description={article.metadata.description}
-        />
+        <section id="intro" className="scroll-mt-24">
+          <AnimatedIntro
+            subtitle={article.metadata.subtitle}
+            title={article.metadata.title}
+            description={article.metadata.description}
+          />
+        </section>
         <DynamicSections contentHtml={article.contentHtml} />
       </article>
     </>
