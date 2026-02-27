@@ -1,8 +1,8 @@
- import type { Metadata } from "next";
- import { Crimson_Pro, Source_Sans_3 } from "next/font/google";
- import Navbar from "@/components/Navbar";
- import TableOfContents from "@/components/TableOfContents";
- import "./globals.css";
+import type { Metadata } from "next";
+import { Crimson_Pro, Source_Sans_3 } from "next/font/google";
+import Navbar from "@/components/Navbar";
+import Providers from "@/app/providers";
+import "./globals.css";
 
 const bodyFont = Source_Sans_3({
   variable: "--font-body",
@@ -29,9 +29,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${bodyFont.variable} ${serifFont.variable} antialiased`}>
-        <Navbar />
-        <TableOfContents />
-        {children}
+        <Providers>
+          <Navbar />
+          {children}
+        </Providers>
       </body>
     </html>
   );

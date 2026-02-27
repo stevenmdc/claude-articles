@@ -13,7 +13,7 @@ A Next.js application replicating the Claude Articles layout with a clean, profe
 
 ## Tech Stack
 
-- **Next.js 14** - React framework with App Router
+- **Next.js 16** - React framework with App Router
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Utility-first styling
 - **Lucide React** - Icon library
