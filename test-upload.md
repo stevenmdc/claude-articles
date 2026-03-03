@@ -22,7 +22,7 @@ Ce titre est volontairement duplique pour tester le dedoublonnage des ancres.
 - [x] Item complete
 - [ ] Item pending
 
-## Tableau GFM
+## Table GFM
 
 | Feature | Status |
 | --- | --- |

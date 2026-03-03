@@ -1,24 +1,32 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useArticleContext } from "@/context/ArticleContext";
+import { Menu, Upload, X } from "lucide-react";
 
 export default function Navbar() {
   const { fileName, source, uploadMarkdownFile, clearUploadedArticle } =
     useArticleContext();
   const [isUploading, setIsUploading] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
   const router = useRouter();
 
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
   const openFilePicker = () => {
+    setIsMobileMenuOpen(false);
     fileInputRef.current?.click();
   };
 
   const handleClear = () => {
+    setIsMobileMenuOpen(false);
     clearUploadedArticle();
     if (pathname === "/reader") {
       router.push("/");
@@ -62,27 +70,29 @@ export default function Navbar() {
             Articles
           </span>
         </Link>
-        <div className="flex items-center gap-4">
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".md,text/markdown"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+
+        <div className="hidden items-center gap-4 sm:flex">
           {source === "uploaded" && fileName ? (
-            <span className="hidden max-w-44 truncate text-xs font-medium text-neutral-600 md:block">
+            <span className="max-w-44 truncate text-xs font-medium text-neutral-600 md:block">
               {fileName}
             </span>
           ) : null}
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".md,text/markdown"
-            className="hidden"
-            onChange={handleFileChange}
-          />
 
           <button
             type="button"
             onClick={openFilePicker}
             disabled={isUploading}
-            className="rounded-md border border-black/10 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 transition hover:border-neutral-300 hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-70"
+            className="inline-flex items-center gap-2 rounded-md border border-black/10 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 transition hover:border-neutral-300 hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-70"
           >
+            <Upload size={14} aria-hidden="true" />
             {isUploading ? "Loading..." : "Upload .md"}
           </button>
 
@@ -98,12 +108,75 @@ export default function Navbar() {
 
           <Link
             href="/pricing"
-            className="hidden text-sm font-medium text-neutral-700 hover:text-neutral-900 sm:flex"
+            className="text-sm font-medium text-neutral-700 hover:text-neutral-900"
           >
             Pricing
           </Link>
+          <Link
+            href="/table"
+            className="text-sm font-medium text-neutral-700 hover:text-neutral-900"
+          >
+            Table
+          </Link>
         </div>
+
+        <button
+          type="button"
+          aria-label="Toggle menu"
+          aria-expanded={isMobileMenuOpen}
+          onClick={() => setIsMobileMenuOpen((open) => !open)}
+          className="rounded-md border border-black/10 bg-white p-2 text-neutral-700 transition hover:text-neutral-900 sm:hidden"
+        >
+          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
       </div>
+
+      {isMobileMenuOpen ? (
+        <div className="border-t border-black/10 bg-[#f0f0eb] px-6 py-4 sm:hidden">
+          <div className="mx-auto flex max-w-6xl flex-col gap-3">
+            {source === "uploaded" && fileName ? (
+              <span className="truncate text-xs font-medium text-neutral-600">
+                {fileName}
+              </span>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={openFilePicker}
+              disabled={isUploading}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-black/10 bg-white px-3 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-300 hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <Upload size={15} aria-hidden="true" />
+              {isUploading ? "Loading..." : "Upload .md"}
+            </button>
+
+            {source === "uploaded" ? (
+              <button
+                type="button"
+                onClick={handleClear}
+                className="w-full rounded-md border border-transparent px-3 py-2 text-left text-sm font-medium text-neutral-600 transition hover:text-neutral-900"
+              >
+                Clear
+              </button>
+            ) : null}
+
+            <Link
+              href="/table"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="py-1 text-sm font-medium text-neutral-700 hover:text-neutral-900"
+            >
+              Pricing
+            </Link>
+            <Link
+              href="/pricing"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="py-1 text-sm font-medium text-neutral-700 hover:text-neutral-900"
+            >
+              Table
+            </Link>
+          </div>
+        </div>
+      ) : null}
     </nav>
   );
 }

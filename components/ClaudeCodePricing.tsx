@@ -1,7 +1,8 @@
 ﻿// components/ClaudeCodePricing.tsx
 "use client";
+import { AnimatePresence, motion } from "framer-motion";
 import { CheckIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const tiers = [
   {
@@ -123,19 +124,44 @@ function classNames(...classes: string[]) {
 
 export default function ClaudeCodePricing() {
   const [selectedMaxVariant, setSelectedMaxVariant] = useState("x5");
+  const [showHeader, setShowHeader] = useState(true);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setShowHeader(false);
+    }, 10000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   return (
     <section>
       <div className="relative overflow-hidden pt-12 border border-neutral-900/60 bg-neutral-950 text-white shadow-[0_30px_80px_-50px_rgba(0,0,0,0.9)]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.09),transparent_55%)]" />
-        <div className="relative text-center px-8 pb-10 pt-12 sm:px-12">
-          <h2 className="mt-3 text-3xl font-heading">
-            Tarification Claude Code
-          </h2>
-          <p className="text-xs uppercase tracking-[0.34em] text-neutral-400">
-            Comparaison des usages
-          </p>
-        </div>
+        <AnimatePresence initial={false}>
+          {showHeader ? (
+            <motion.div
+              initial={{ opacity: 1, y: 0, height: "auto" }}
+              animate={{ opacity: 1, y: 0, height: "auto" }}
+              exit={{
+                opacity: 0,
+                y: -14,
+                height: 0,
+                paddingTop: 0,
+                paddingBottom: 0,
+              }}
+              transition={{ duration: 0.6, ease: "easeInOut" }}
+              className="relative overflow-hidden px-8 pb-10 pt-12 text-center sm:px-12"
+            >
+              <h2 className="mt-3 text-3xl font-heading">
+                Tarification Claude Code
+              </h2>
+              <p className="text-xs uppercase tracking-[0.34em] text-neutral-400">
+                Comparaison des usages
+              </p>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
         <div className="relative px-6 pb-12 sm:px-10">
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             {tiers.map((tier) => {
