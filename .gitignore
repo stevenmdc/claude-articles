@@ -23,6 +23,10 @@
 # misc
 .DS_Store
 *.pem
+/*.md
+/public/images/*.jpg
+/public/images/*.jpeg
+/public/images/*.webp
 
 # debug
 npm-debug.log*
