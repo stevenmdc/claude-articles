@@ -1,5 +1,7 @@
 # Claude Articles
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A Next.js application replicating the Claude Articles layout with a clean, professional design.
 
 ## Features
@@ -90,4 +92,4 @@ npm start
 
 ## License
 
-This is a demo project created for educational purposes.
+This project is licensed under the MIT License — see the LICENSE file for details.
