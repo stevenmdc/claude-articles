@@ -228,7 +228,7 @@ export default function TablePage() {
           ) : null}
         </AnimatePresence>
 
-        <div className="rounded-2xl border border-black/10 bg-[#f0f0eb]/70 p-4 sm:p-6">
+        <div className="rounded-2xl border border-black/10 bg-white p-4 sm:p-8">
           <TableView data={mockRows} initialColumns={mockColumns} />
         </div>
       </section>

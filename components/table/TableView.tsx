@@ -24,7 +24,6 @@ import {
 } from "react";
 import BulkActionBar from "@/components/table/BulkActionBar";
 import ImportExportBar from "@/components/table/ImportExportBar";
-import RowActions from "@/components/table/RowActions";
 import TableSettings from "@/components/table/TableSettings";
 import type {
   CellValue,
@@ -60,17 +59,30 @@ const densityInputHeight: Record<TableDensity, string> = {
 const DEFAULT_COLUMN_WIDTH = 220;
 const MIN_COLUMN_WIDTH = 90;
 const MAX_COLUMN_WIDTH = 560;
+const SELECTION_COLUMN_WIDTH = 72;
+const HEADER_ICON_WIDTH = 28;
+const CELL_HORIZONTAL_PADDING = 24;
+const TEXT_CHARACTER_WIDTH = 9;
+const NUMBER_CHARACTER_WIDTH = 10;
+const BOOLEAN_COLUMN_MIN_WIDTH = 92;
 const MAX_VISIBLE_LOGOS = 4;
 const LOGO_SIZE = 32;
 const ADD_LOGO_BUTTON_SIZE = 40;
 const LOGO_OVERLAP = 8;
-
-function generateRowId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `row-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
-}
+const COLUMN_HIGHLIGHT_STYLES = [
+  {
+    header: "bg-sky-300/42",
+    cell: "bg-sky-300/34",
+  },
+  {
+    header: "bg-sky-200/48",
+    cell: "bg-sky-200/36",
+  },
+  {
+    header: "bg-sky-100/68",
+    cell: "bg-sky-100/58",
+  },
+] as const;
 
 function normalizeId(value: string): string {
   const base = value
@@ -79,6 +91,45 @@ function normalizeId(value: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
   return base || "column";
+}
+
+function createUniqueId(
+  baseLabel: string,
+  existingIds: Set<string>,
+  fallback: string,
+): string {
+  const baseId = normalizeId(baseLabel) || fallback;
+  let candidate = baseId;
+  let suffix = 2;
+
+  while (existingIds.has(candidate)) {
+    candidate = `${baseId}-${suffix}`;
+    suffix += 1;
+  }
+
+  existingIds.add(candidate);
+  return candidate;
+}
+
+function getTransposeColumnLabel(
+  row: TableRow,
+  rowIndex: number,
+  columns: TableColumn[],
+): string {
+  const matchingTextColumn = columns.find((column) => {
+    if (column.type !== "text") {
+      return false;
+    }
+
+    const value = row[column.id];
+    return typeof value === "string" && value.trim() !== "";
+  });
+
+  if (matchingTextColumn) {
+    return String(row[matchingTextColumn.id]).trim();
+  }
+
+  return `Row ${rowIndex + 1}`;
 }
 
 function defaultValueByType(type: ColumnType): CellValue {
@@ -134,6 +185,38 @@ function escapeCsvCell(value: CellValue): string {
   const normalized = value === null ? "" : String(value);
   const escaped = normalized.replace(/"/g, '""');
   return `"${escaped}"`;
+}
+
+function clampColumnWidth(width: number): number {
+  return Math.max(MIN_COLUMN_WIDTH, Math.min(MAX_COLUMN_WIDTH, width));
+}
+
+function estimateTextWidth(value: string, characterWidth: number): number {
+  return value.trim().length * characterWidth;
+}
+
+function getAutoColumnWidth(column: TableColumn, rows: TableRow[]): number {
+  const labelWidth =
+    estimateTextWidth(column.label, TEXT_CHARACTER_WIDTH) +
+    CELL_HORIZONTAL_PADDING +
+    (column.sortable ? HEADER_ICON_WIDTH : 0);
+
+  if (column.type === "boolean") {
+    return clampColumnWidth(Math.max(labelWidth, BOOLEAN_COLUMN_MIN_WIDTH));
+  }
+
+  const characterWidth =
+    column.type === "number" ? NUMBER_CHARACTER_WIDTH : TEXT_CHARACTER_WIDTH;
+
+  const widestCellWidth = rows.reduce((maxWidth, row) => {
+    const value = formatCellValue(row[column.id] ?? null);
+    return Math.max(
+      maxWidth,
+      estimateTextWidth(value, characterWidth) + CELL_HORIZONTAL_PADDING,
+    );
+  }, 0);
+
+  return clampColumnWidth(Math.max(labelWidth, widestCellWidth));
 }
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -212,13 +295,7 @@ function ConfirmationDialog({
 export default function TableView({ data, initialColumns }: TableViewProps) {
   const [tableTitle, setTableTitle] = useState("My table");
   const [columns, setColumns] = useState<TableColumn[]>(initialColumns);
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
-    const initial: Record<string, number> = {};
-    for (const column of initialColumns) {
-      initial[column.id] = DEFAULT_COLUMN_WIDTH;
-    }
-    return initial;
-  });
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [rows, setRows] = useState<TableRow[]>(data);
   const [sort, setSort] = useState<SortState>({ columnId: null, direction: "asc" });
   const [currentPage, setCurrentPage] = useState(1);
@@ -228,10 +305,10 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
   const [showColumnSeparators, setShowColumnSeparators] = useState(false);
   const [stripedRows, setStripedRows] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [highlightedColumnIds, setHighlightedColumnIds] = useState<string[]>([]);
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [editingDraft, setEditingDraft] = useState("");
-  const [pendingDeleteRowId, setPendingDeleteRowId] = useState<string | null>(null);
   const [pendingBulkDelete, setPendingBulkDelete] = useState(false);
   const [rowLogosById, setRowLogosById] = useState<Record<string, string[]>>({});
   const selectAllRef = useRef<HTMLInputElement>(null);
@@ -242,6 +319,21 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
     () => columns.filter((column) => column.visible),
     [columns],
   );
+  const autoColumnWidths = useMemo(() => {
+    const next: Record<string, number> = {};
+    for (const column of columns) {
+      next[column.id] = getAutoColumnWidth(column, rows);
+    }
+    return next;
+  }, [columns, rows]);
+  const resolvedColumnWidths = useMemo(() => {
+    const next: Record<string, number> = {};
+    for (const column of columns) {
+      next[column.id] =
+        columnWidths[column.id] ?? autoColumnWidths[column.id] ?? DEFAULT_COLUMN_WIDTH;
+    }
+    return next;
+  }, [autoColumnWidths, columnWidths, columns]);
   const logosColumnWidth = useMemo(() => {
     const maxLogosCount = Math.max(
       0,
@@ -260,6 +352,17 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
 
     return Math.max(96, Math.min(220, contentWidth + 24));
   }, [rowLogosById]);
+  const tableWidth = useMemo(() => {
+    const contentColumnsWidth = visibleColumns.reduce(
+      (total, column) => total + (resolvedColumnWidths[column.id] ?? DEFAULT_COLUMN_WIDTH),
+      0,
+    );
+    return (
+      logosColumnWidth +
+      contentColumnsWidth +
+      SELECTION_COLUMN_WIDTH
+    );
+  }, [logosColumnWidth, resolvedColumnWidths, visibleColumns]);
 
   const sortedRows = useMemo(() => {
     if (!sort.columnId) {
@@ -395,47 +498,6 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
     cancelEditCell();
   };
 
-  const handleDuplicateRow = (rowId: string) => {
-    setRows((current) => {
-      const index = current.findIndex((row) => row.id === rowId);
-      if (index === -1) {
-        return current;
-      }
-
-      const source = current[index];
-      const duplicate: TableRow = {
-        ...source,
-        id: generateRowId(),
-      };
-
-      const firstTextColumn = columns.find((column) => column.type === "text");
-      if (firstTextColumn) {
-        const existingValue = duplicate[firstTextColumn.id];
-        if (typeof existingValue === "string" && existingValue.trim() !== "") {
-          duplicate[firstTextColumn.id] = `${existingValue} (copy)`;
-        } else {
-          duplicate[firstTextColumn.id] = "Copied row";
-        }
-      }
-
-      const nextRows = [...current];
-      nextRows.splice(index + 1, 0, duplicate);
-      return nextRows;
-    });
-  };
-
-  const handleDeleteRow = () => {
-    if (!pendingDeleteRowId) {
-      return;
-    }
-
-    setRows((current) => current.filter((row) => row.id !== pendingDeleteRowId));
-    setSelectedRowIds((current) =>
-      current.filter((rowId) => rowId !== pendingDeleteRowId),
-    );
-    setPendingDeleteRowId(null);
-  };
-
   const handleDeleteSelectedRows = () => {
     if (selectedRowIds.length === 0) {
       return;
@@ -496,10 +558,6 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
     };
 
     setColumns((current) => [...current, nextColumn]);
-    setColumnWidths((current) => ({
-      ...current,
-      [nextId]: DEFAULT_COLUMN_WIDTH,
-    }));
     setRows((current) =>
       current.map((row) => ({
         ...row,
@@ -568,6 +626,9 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
       delete next[columnId];
       return next;
     });
+    setHighlightedColumnIds((current) =>
+      current.filter((highlightedColumnId) => highlightedColumnId !== columnId),
+    );
 
     setSort((current) => {
       if (current.columnId === columnId) {
@@ -601,17 +662,21 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
     setColumnWidths((current) => {
       const next: Record<string, number> = {};
       for (const column of nextColumns) {
-        next[column.id] = current[column.id] ?? DEFAULT_COLUMN_WIDTH;
+        if (current[column.id] !== undefined) {
+          next[column.id] = current[column.id];
+        }
       }
       return next;
     });
     setRows(nextRows);
     setSort({ columnId: null, direction: "asc" });
     setSelectedRowIds([]);
+    setHighlightedColumnIds((current) =>
+      current.filter((columnId) => nextColumns.some((column) => column.id === columnId)),
+    );
     setCurrentPage(1);
     setEditingCell(null);
     setEditingDraft("");
-    setPendingDeleteRowId(null);
     setPendingBulkDelete(false);
     setRowLogosById((current) => {
       const next: Record<string, string[]> = {};
@@ -624,6 +689,73 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
     });
   };
 
+  const handleTransposeTable = () => {
+    if (columns.length === 0) {
+      return;
+    }
+
+    const reservedIds = new Set<string>();
+    const labelColumnId = createUniqueId("Field", reservedIds, "field");
+    const transposedColumns: TableColumn[] = [
+      {
+        id: labelColumnId,
+        label: "Field",
+        type: "text",
+        visible: true,
+        sortable: true,
+      },
+    ];
+
+    rows.forEach((row, rowIndex) => {
+      const label = getTransposeColumnLabel(row, rowIndex, columns);
+      transposedColumns.push({
+        id: createUniqueId(label, reservedIds, `row-${rowIndex + 1}`),
+        label,
+        type: "text",
+        visible: true,
+        sortable: true,
+      });
+    });
+
+    const transposedRows: TableRow[] = columns.map((column, columnIndex) => {
+      const nextRow: TableRow = {
+        id: `${normalizeId(column.label) || column.id}-${columnIndex + 1}`,
+        [labelColumnId]: column.label,
+      };
+
+      rows.forEach((row, rowIndex) => {
+        const targetColumn = transposedColumns[rowIndex + 1];
+        if (!targetColumn) {
+          return;
+        }
+
+        nextRow[targetColumn.id] = formatCellValue(row[column.id] ?? null);
+      });
+
+      return nextRow;
+    });
+
+    setColumns(transposedColumns);
+    setRows(transposedRows);
+    setColumnWidths({});
+    setSort({ columnId: null, direction: "asc" });
+    setSelectedRowIds([]);
+    setHighlightedColumnIds([]);
+    setCurrentPage(1);
+    setEditingCell(null);
+    setEditingDraft("");
+    setPendingBulkDelete(false);
+    setRowLogosById({});
+  };
+
+  const handleToggleColumnHighlight = (columnId: string) => {
+    setHighlightedColumnIds((current) =>
+      current.includes(columnId)
+        ? current.filter((highlightedColumnId) => highlightedColumnId !== columnId)
+        : [...current, columnId],
+    );
+  };
+
   const handleStartColumnResize = (
     columnId: string,
     event: ReactMouseEvent<HTMLButtonElement>,
@@ -632,14 +764,11 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
     event.stopPropagation();
 
     const startX = event.clientX;
-    const startWidth = columnWidths[columnId] ?? DEFAULT_COLUMN_WIDTH;
+    const startWidth = resolvedColumnWidths[columnId] ?? DEFAULT_COLUMN_WIDTH;
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const deltaX = moveEvent.clientX - startX;
-      const nextWidth = Math.max(
-        MIN_COLUMN_WIDTH,
-        Math.min(MAX_COLUMN_WIDTH, startWidth + deltaX),
-      );
+      const nextWidth = clampColumnWidth(startWidth + deltaX);
       setColumnWidths((current) => ({
         ...current,
         [columnId]: nextWidth,
@@ -738,10 +867,6 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
     URL.revokeObjectURL(url);
   };
 
-  const pendingDeleteRow = pendingDeleteRowId
-    ? rows.find((row) => row.id === pendingDeleteRowId) ?? null
-    : null;
-
   return (
     <>
       <BulkActionBar
@@ -755,7 +880,7 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
       />
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-xl font-semibold text-neutral-900">{tableTitle}</h2>
+        <h2 className="text-2xl font-semibold text-neutral-900">{tableTitle}</h2>
         <div className="flex flex-wrap items-start justify-end gap-2">
           <ImportExportBar
             columns={columns}
@@ -782,9 +907,13 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-black/10 bg-white shadow-sm">
-        <table className="min-w-full border-collapse text-sm" role="grid">
-          <thead className="bg-neutral-200/90">
+      <div className="overflow-x-auto bg-white p-4 sm:p-8">
+        <table
+          className="border-separate border-spacing-x-2 border-spacing-y-0 text-sm"
+          role="grid"
+          style={{ width: `${tableWidth}px` }}
+        >
+          <thead>
             <tr className={`h-12 ${showGridLines ? "border-b border-black/10" : ""}`}>
               <th
                 scope="col"
@@ -797,11 +926,17 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
                   showColumnSeparators ? "border-r border-black/10" : ""
                 }`}
               >
-                Logos
               </th>
               {visibleColumns.map((column) => {
                 const columnWidth =
-                  columnWidths[column.id] ?? DEFAULT_COLUMN_WIDTH;
+                  resolvedColumnWidths[column.id] ?? DEFAULT_COLUMN_WIDTH;
+                const highlightIndex = highlightedColumnIds.indexOf(column.id);
+                const highlightStyle =
+                  highlightIndex >= 0
+                    ? COLUMN_HIGHLIGHT_STYLES[
+                        highlightIndex % COLUMN_HIGHLIGHT_STYLES.length
+                      ]
+                    : null;
                 const ariaSortValue =
                   sort.columnId === column.id
                     ? sort.direction === "asc"
@@ -820,10 +955,14 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
                       maxWidth: `${columnWidth}px`,
                     }}
                     className={`px-3 py-2 text-left text-base font-semibold uppercase text-neutral-800 ${
+                      highlightStyle?.header ?? ""
+                    } ${
+                      highlightIndex >= 0 ? "rounded-t-md overflow-hidden" : ""
+                    } ${
                       showColumnSeparators ? "border-r border-black/10" : ""
                     }`}
                   >
-                    <div className="relative w-full pr-2">
+                    <div className="group relative w-full pr-3">
                       <div className="flex min-w-0 items-center gap-2">
                         {column.sortable ? (
                           <button
@@ -857,11 +996,11 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
                         onMouseDown={(event) =>
                           handleStartColumnResize(column.id, event)
                         }
-                        className="absolute right-0 top-1/2 z-10 h-full w-3 -translate-y-1/2 translate-x-1/2 cursor-col-resize"
+                        className="absolute -right-2.5 top-1/2 z-10 flex h-full w-4 -translate-y-1/2 translate-x-1/2 cursor-col-resize items-center justify-center outline-none"
                       >
                         <span
                           aria-hidden="true"
-                          className="mx-auto block h-6 w-px rounded-full bg-transparent transition hover:bg-neutral-500"
+                          className="pointer-events-none absolute left-1/2 top-1/2 h-6 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-neutral-300 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
                         />
                       </button>
                     </div>
@@ -870,13 +1009,8 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
               })}
               <th
                 scope="col"
-                className={`w-16 px-3 py-2 text-right text-base font-semibold uppercase text-neutral-800 ${
-                  showColumnSeparators ? "border-r border-black/10" : ""
-                }`}
+                className="w-12 px-3 py-2 mr-2 text-right"
               >
-                Actions
-              </th>
-              <th scope="col" className="w-12 px-3 py-2 text-right">
                 <input
                   ref={selectAllRef}
                   type="checkbox"
@@ -893,7 +1027,7 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
             {pageRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={visibleColumns.length + 3}
+                  colSpan={visibleColumns.length + 2}
                   className="px-4 py-8 text-center text-sm text-neutral-500"
                 >
                   No rows available.
@@ -979,7 +1113,14 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
 
                     {visibleColumns.map((column) => {
                       const columnWidth =
-                        columnWidths[column.id] ?? DEFAULT_COLUMN_WIDTH;
+                        resolvedColumnWidths[column.id] ?? DEFAULT_COLUMN_WIDTH;
+                      const highlightIndex = highlightedColumnIds.indexOf(column.id);
+                      const highlightStyle =
+                        highlightIndex >= 0
+                          ? COLUMN_HIGHLIGHT_STYLES[
+                              highlightIndex % COLUMN_HIGHLIGHT_STYLES.length
+                            ]
+                          : null;
                       const cellKey = `${row.id}-${column.id}`;
                       const value = row[column.id] ?? null;
                       const isEditing =
@@ -995,6 +1136,8 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
                             maxWidth: `${columnWidth}px`,
                           }}
                           className={`h-full px-3 align-middle text-neutral-700 ${
+                            highlightStyle?.cell ?? ""
+                          } ${
                             showColumnSeparators ? "border-r border-black/10" : ""
                           }`}
                         >
@@ -1055,7 +1198,7 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
                               aria-label={`Cell ${column.label}, row ${
                                 absoluteIndex + 1
                               }. Press Enter to edit.`}
-                              className="flex h-full w-full items-center rounded px-2 py-1 outline-none transition focus:bg-sky-50 focus:ring-2 focus:ring-sky-200"
+                              className="flex h-full w-full items-center rounded py-1 outline-none transition focus:bg-sky-50 focus:ring-2 focus:ring-sky-200"
                               title={formatCellValue(value)}
                             >
                               <span className="block w-full truncate">
@@ -1066,18 +1209,6 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
                         </td>
                       );
                     })}
-
-                    <td
-                      className={`h-full px-3 text-right align-middle ${
-                        showColumnSeparators ? "border-r border-black/10" : ""
-                      }`}
-                    >
-                      <RowActions
-                        rowLabel={`row ${absoluteIndex + 1}`}
-                        onDuplicate={() => handleDuplicateRow(row.id)}
-                        onDelete={() => setPendingDeleteRowId(row.id)}
-                      />
-                    </td>
 
                     <td className="h-full px-3 text-right align-middle">
                       <input
@@ -1155,21 +1286,15 @@ export default function TableView({ data, initialColumns }: TableViewProps) {
         }
         onToggleStripedRows={() => setStripedRows((current) => !current)}
         onToggleColumnVisibility={handleToggleColumnVisibility}
+        highlightedColumnIds={highlightedColumnIds}
+        onToggleColumnHighlight={handleToggleColumnHighlight}
         tableTitle={tableTitle}
         onTableTitleChange={setTableTitle}
         onAddColumn={handleAddColumn}
         onRenameColumn={handleRenameColumn}
         onDeleteColumn={handleDeleteColumn}
         onMoveColumn={handleMoveColumn}
-      />
-
-      <ConfirmationDialog
-        open={pendingDeleteRow !== null}
-        title="Delete row"
-        description="This action cannot be undone. The selected row will be permanently removed from the table."
-        actionLabel="Delete row"
-        onCancel={() => setPendingDeleteRowId(null)}
-        onConfirm={handleDeleteRow}
+        onTransposeTable={handleTransposeTable}
       />
 
       <ConfirmationDialog

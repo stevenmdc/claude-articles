@@ -61,11 +61,14 @@ export default function TableOfContents({
 
   return (
     <aside className="fixed left-0 top-16 hidden h-[calc(100vh-4rem)] w-64 border-r border-black/10 bg-white/70 px-4 py-6 backdrop-blur lg:block">
-      <div className="space-y-4">
+      <div className="flex h-full min-h-0 flex-col space-y-4">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
           Chapters
         </p>
-        <nav aria-label="Table of contents" className="space-y-1">
+        <nav
+          aria-label="Table of contents"
+          className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-2"
+        >
           {chapters.map((chapter) => {
             const isActive = chapter.id === resolvedActiveId;
 
@@ -88,7 +91,9 @@ export default function TableOfContents({
                 }`}
                 initial={false}
                 animate={{
-                  backgroundColor: isActive ? "rgb(245 245 245 / 0.8)" : "transparent",
+                  backgroundColor: isActive
+                    ? "rgba(245, 245, 245, 0.8)"
+                    : "rgba(245, 245, 245, 0)",
                 }}
                 transition={{
                   duration: 0.3,

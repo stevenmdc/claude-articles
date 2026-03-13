@@ -17,6 +17,7 @@ interface TableSettingsProps {
   showColumnSeparators: boolean;
   stripedRows: boolean;
   columns: TableColumn[];
+  highlightedColumnIds: string[];
   tableTitle: string;
   onClose: () => void;
   onDensityChange: (density: TableDensity) => void;
@@ -25,11 +26,13 @@ interface TableSettingsProps {
   onToggleColumnSeparators: () => void;
   onToggleStripedRows: () => void;
   onToggleColumnVisibility: (columnId: string) => void;
+  onToggleColumnHighlight: (columnId: string) => void;
   onTableTitleChange: (title: string) => void;
   onAddColumn: (payload: { label: string; type: ColumnType }) => void;
   onRenameColumn: (columnId: string, label: string) => void;
   onDeleteColumn: (columnId: string) => void;
   onMoveColumn: (columnId: string, direction: "up" | "down") => void;
+  onTransposeTable: () => void;
 }
 
 const densityOptions: Array<{ value: TableDensity; label: string }> = [
@@ -48,6 +51,7 @@ export default function TableSettings({
   showColumnSeparators,
   stripedRows,
   columns,
+  highlightedColumnIds,
   tableTitle,
   onClose,
   onDensityChange,
@@ -56,11 +60,13 @@ export default function TableSettings({
   onToggleColumnSeparators,
   onToggleStripedRows,
   onToggleColumnVisibility,
+  onToggleColumnHighlight,
   onTableTitleChange,
   onAddColumn,
   onRenameColumn,
   onDeleteColumn,
   onMoveColumn,
+  onTransposeTable,
 }: TableSettingsProps) {
   const [newLabel, setNewLabel] = useState("");
   const [newType, setNewType] = useState<ColumnType>("text");
@@ -159,6 +165,18 @@ export default function TableSettings({
                     className="block rounded-md px-2 py-1.5 text-sm text-neutral-700 transition hover:bg-white hover:text-neutral-900"
                   >
                     Display
+                  </a>
+                  <a
+                    href="#column-highlights"
+                    className="block rounded-md px-2 py-1.5 text-sm text-neutral-700 transition hover:bg-white hover:text-neutral-900"
+                  >
+                    Highlights
+                  </a>
+                  <a
+                    href="#structure-settings"
+                    className="block rounded-md px-2 py-1.5 text-sm text-neutral-700 transition hover:bg-white hover:text-neutral-900"
+                  >
+                    Structure
                   </a>
                   <a
                     href="#column-management"
@@ -275,6 +293,66 @@ export default function TableSettings({
                 </section>
 
                 <section
+                  id="column-highlights"
+                  aria-label="Column highlight settings"
+                  className="space-y-3"
+                >
+                  <p className="text-sm font-semibold text-neutral-900">
+                    Column highlights
+                  </p>
+                  <div className="rounded-lg border border-black/10 bg-white p-4">
+                    <p className="mb-3 text-sm leading-6 text-neutral-700">
+                      Add blue emphasis to important columns. Highlights stack with
+                      softer shades as you add more.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {columns.map((column) => {
+                        const isHighlighted = highlightedColumnIds.includes(column.id);
+
+                        return (
+                          <button
+                            key={`highlight-${column.id}`}
+                            type="button"
+                            onClick={() => onToggleColumnHighlight(column.id)}
+                            className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                              isHighlighted
+                                ? "border-sky-300 bg-sky-100 text-sky-900"
+                                : "border-black/10 bg-white text-neutral-700 hover:border-neutral-300 hover:text-neutral-900"
+                            }`}
+                          >
+                            {column.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </section>
+
+                <section
+                  id="structure-settings"
+                  aria-label="Structure settings"
+                  className="space-y-3"
+                >
+                  <p className="text-sm font-semibold text-neutral-900">Structure</p>
+                  <div className="rounded-lg border border-black/10 bg-white p-4">
+                    <p className="text-sm leading-6 text-neutral-700">
+                      Switch rows and columns. Transposed values are converted to
+                      text to keep the table layout consistent.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onTransposeTable();
+                        onClose();
+                      }}
+                      className="mt-3 inline-flex items-center justify-center rounded-md border border-black/10 bg-neutral-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-black"
+                    >
+                      Switch rows and columns
+                    </button>
+                  </div>
+                </section>
+
+                <section
                   id="column-management"
                   aria-label="Column management"
                   className="space-y-3"
@@ -329,7 +407,7 @@ export default function TableSettings({
                     {columns.map((column, index) => (
                       <div
                         key={column.id}
-                        className="grid items-center gap-2 rounded-lg border border-black/10 bg-white p-3 sm:grid-cols-[1fr_auto_auto_auto]"
+                        className="grid items-center gap-2 rounded-lg border border-black/10 bg-white p-3 sm:grid-cols-[1fr_auto_auto_auto_auto]"
                       >
                         <input
                           defaultValue={column.label}
@@ -379,6 +457,21 @@ export default function TableSettings({
                             <ArrowDown size={14} aria-hidden="true" />
                           </button>
                         </div>
+
+                        <button
+                          type="button"
+                          aria-pressed={highlightedColumnIds.includes(column.id)}
+                          onClick={() => onToggleColumnHighlight(column.id)}
+                          className={`rounded-md border px-3 py-2 text-sm transition ${
+                            highlightedColumnIds.includes(column.id)
+                              ? "border-sky-300 bg-sky-100 text-sky-900"
+                              : "border-black/10 bg-white text-neutral-700 hover:border-neutral-300"
+                          }`}
+                        >
+                          {highlightedColumnIds.includes(column.id)
+                            ? "Highlighted"
+                            : "Highlight"}
+                        </button>
 
                         <button
                           type="button"
